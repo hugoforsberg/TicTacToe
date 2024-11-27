@@ -3,6 +3,7 @@ package com.hugo.tictactoe
 import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,9 +11,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.OutlinedTextField
@@ -27,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -35,6 +39,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.flow.asStateFlow
+import androidx.compose.material3.MaterialTheme.typography as typography1
 
 
 data class Player(
@@ -99,7 +104,7 @@ fun NewPlayerScreen(navController: NavController, model: GameModel) {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Welcome to Tic Tac Toe!")
+            Text("Welcome to TicTacToe!")
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -163,9 +168,26 @@ fun LobbyScreen(navController: NavController, model: GameModel) {
     Scaffold(
         topBar = { TopAppBar(title = { Text("TicTacToe - $playerName") }) }
     ) { innerPadding ->
-        LazyColumn(modifier = Modifier.padding(innerPadding)) {
-            items(players.entries.toList()) { (documentId, player) ->
-                if (documentId != model.localPlayerID.value) { // Don't show yourself
+        //All players except yourself
+        val otherPlayers = players.entries.filter { it.key != model.localPlayerID.value }
+
+        if (otherPlayers.isEmpty()) { //No players are online
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                contentAlignment = Alignment.Center
+
+            ) {
+                Text(
+                    text = "No players online",
+                    style = typography1.headlineMedium
+                )
+            }
+
+        } else {
+            LazyColumn(modifier = Modifier.padding(innerPadding)) {
+                items(otherPlayers) { (documentId, player) ->
                     ListItem(
                         headlineContent = {
                             Text("Player Name: ${player.name}")
@@ -177,23 +199,58 @@ fun LobbyScreen(navController: NavController, model: GameModel) {
                             var hasGame = false
                             games.forEach { (gameId, game) ->
                                 if (game.player1Id == model.localPlayerID.value && game.gameState == "invite") {
-                                    Text("Waiting for accept...")
+                                    Text("Waiting for response...")
                                     hasGame = true
                                 } else if (game.player2Id == model.localPlayerID.value && game.gameState == "invite") {
-                                    Button(onClick = {
-                                        model.db.collection("games").document(gameId)
-                                            .update("gameState", "player1_turn")
-                                            .addOnSuccessListener {
-                                                navController.navigate("game/${gameId}")
-                                            }
-                                            .addOnFailureListener {
-                                                Log.e(
-                                                    "Error",
-                                                    "Error updating game: $gameId"
-                                                )
-                                            }
-                                    }) {
-                                        Text("Accept invite")
+                                    Row {
+                                        Button(
+                                            onClick = {
+                                                model.db.collection("games").document(gameId)
+                                                    .update("gameState", "player1_turn")
+                                                    .addOnSuccessListener {
+                                                        navController.navigate("game/${gameId}")
+                                                    }
+                                                    .addOnFailureListener {
+                                                        Log.e(
+                                                            "Error",
+                                                            "Error updating game: $gameId"
+                                                        )
+                                                    }
+                                            },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = Color(0xFF4CAF50), // Grön
+                                                contentColor = Color.White              // Textfärg
+                                            )
+                                            //TODO : edit button size
+                                        ) {
+                                            Text("Accept invite")
+                                        }
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Button(
+                                            onClick = {
+                                                model.db.collection("games").document(gameId)
+                                                    .delete()
+                                                    .addOnSuccessListener {
+                                                        Log.i(
+                                                            "Decline",
+                                                            "Invite declined and game $gameId deleted"
+                                                        )
+                                                    }
+                                                    .addOnFailureListener {
+                                                        Log.e(
+                                                            "Error",
+                                                            "Error declining game: $gameId"
+                                                        )
+                                                    }
+                                            },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = Color.Red,       // Röd
+                                                contentColor = Color.White       // Textfärg
+                                            ),
+                                            //TODO : edit button size
+                                        ) {
+                                            Text("Decline invite")
+                                        }
                                     }
                                     hasGame = true
                                 }
@@ -222,6 +279,7 @@ fun LobbyScreen(navController: NavController, model: GameModel) {
         }
     }
 }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameScreen(navController: NavController, model: GameModel, gameId: String?) {
@@ -230,7 +288,7 @@ fun GameScreen(navController: NavController, model: GameModel, gameId: String?) 
 
     if (gameId != null && games.containsKey(gameId)) {
         Scaffold(
-            topBar = { TopAppBar(title =  { Text("TicTacToe - $gameId")}) }
+            topBar = { TopAppBar(title = { Text("TicTacToe - $gameId") }) }
         ) { innerPadding ->
             Column(modifier = Modifier.padding(innerPadding)) {
 
@@ -252,7 +310,7 @@ fun GameScreen(navController: NavController, model: GameModel, gameId: String?) 
         }
     } else {
         Log.e(
-            "RobinError",
+            "HugoError",
             "Error Game not found: $gameId"
         )
         navController.navigate("lobby")
