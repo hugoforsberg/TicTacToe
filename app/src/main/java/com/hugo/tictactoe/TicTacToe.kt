@@ -1,13 +1,13 @@
 package com.hugo.tictactoe
 
 import android.content.Context
-import android.graphics.drawable.Icon
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -24,7 +24,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButtonDefaults.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -39,12 +38,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.hugo.tictactoe.R.drawable.outline_circle_24
+import com.hugo.tictactoe.R.drawable.outline_cross_24
 import kotlinx.coroutines.flow.asStateFlow
 import androidx.compose.material3.MaterialTheme.typography as typography1
 
@@ -214,8 +217,8 @@ fun LobbyScreen(navController: NavController, model: GameModel) {
                                                     }
                                             },
                                             colors = ButtonDefaults.buttonColors(
-                                                containerColor = Color(0xFF4CAF50), // Grön
-                                                contentColor = Color.White              // Textfärg
+                                                containerColor = Color(0xFF4CAF50), // Green
+                                                contentColor = Color.White              // Text color
                                             )
                                             //TODO : edit button size
                                         ) {
@@ -240,8 +243,8 @@ fun LobbyScreen(navController: NavController, model: GameModel) {
                                                     }
                                             },
                                             colors = ButtonDefaults.buttonColors(
-                                                containerColor = Color.Red,       // Röd
-                                                contentColor = Color.White       // Textfärg
+                                                containerColor = Color.Red,       // Red
+                                                contentColor = Color.White       // Text color
                                             ),
                                             //TODO : edit button size
                                         ) {
@@ -281,6 +284,9 @@ fun LobbyScreen(navController: NavController, model: GameModel) {
 fun GameScreen(navController: NavController, model: GameModel, gameId: String?) {
     val players by model.playerMap.asStateFlow().collectAsStateWithLifecycle()
     val games by model.gameMap.asStateFlow().collectAsStateWithLifecycle()
+
+    Log.d("Recomposition", "Composable redrawn. Game board: ${games[gameId]?.gameBoard}")
+
 
     var playerName = "Unknown?"
     players[model.localPlayerID.value]?.let {
@@ -347,41 +353,49 @@ fun GameScreen(navController: NavController, model: GameModel, gameId: String?) 
                 //row * 3 + col
                 //i * 3 + j
 
+                //Draw the board
                 for (i in 0..<rows) {
                     Row {
                         for (j in 0..<cols) {
                             Button(
                                 shape = RectangleShape,
                                 modifier = Modifier
-                                    .size(100.dp)
+                                    .size(80.dp)
                                     .padding(2.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = Color.LightGray
                                 ),
                                 onClick = {
                                     model.checkGameState(gameId, i * cols + j)
+                                    Log.d("GameBoard", "Game board after click: ${game.gameBoard}")
                                 }
                             ) {
-                                if (game.gameBoard[i * cols + j] == 1) {
-                                    Icon(
+                                when (game.gameBoard[i * cols + j]) {
+                                    1 -> Icon(
                                         painter = painterResource(
-                                            id = R.drawable.outline_cross_24
+                                            id = outline_cross_24
                                         ),
                                         tint = Color.Red,
                                         contentDescription = "X",
-                                        modifier = Modifier.size(48.dp)
+                                        modifier = Modifier
+                                            .size(50.dp)
+                                            .aspectRatio(1f)
+
                                     )
-                                } else if (game.gameBoard[i * cols + j] == 2) {
-                                    Icon(
+
+                                    2 -> Icon(
                                         painter = painterResource(
-                                            id = R.drawable.outline_circle_24
+                                            id = outline_circle_24
                                         ),
                                         tint = Color.Blue,
                                         contentDescription = "O",
-                                        modifier = Modifier.size(48.dp)
+                                        modifier = Modifier
+                                            .size(50.dp)
+                                            .aspectRatio(1f)
                                     )
-                                } else {
-                                    Text("")
+
+                                    else -> Text(" ")
+
                                 }
                             }
                         }

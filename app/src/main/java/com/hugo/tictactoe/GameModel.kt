@@ -1,5 +1,6 @@
 package com.hugo.tictactoe
 
+import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.google.firebase.Firebase
@@ -44,18 +45,21 @@ class GameModel : ViewModel() {
         //Listen for games
         db.collection("games")
             .addSnapshotListener { value, error ->
-                if (error != null)
+                if (error != null) {
+                    Log.e("FirestoreError", "Error listening to games: $error")
                     return@addSnapshotListener
+                }
                 if (value != null) {
                     val updatedMap = value.documents.associate { doc ->
                         doc.id to doc.toObject(Game::class.java)!!
                     }
                     gameMap.value = updatedMap
+                    Log.d("FirestoreUpdate", "Game map updated: $updatedMap")
                 }
             }
     }
 
-    fun checkWinner(board: List<Int>): Int {
+    private fun checkWinner(board: List<Int>): Int {
         // Check rows
         for (i in 0..2) {
             if (board[i * 3] != 0 && board[i * 3] == board[i * 3 + 1]
