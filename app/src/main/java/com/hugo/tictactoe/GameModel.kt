@@ -92,7 +92,7 @@ class GameModel : ViewModel() {
 
     fun checkGameState(gameId: String?, cell: Int) {
         if (cell < 0 || cell >= 9)
-            return // Ogiltigt index, returnera utan att göra något
+            return // Invalid cell index, return immediately
 
 
         if (gameId.isNullOrEmpty() || localPlayerID.value.isNullOrEmpty())
@@ -111,31 +111,34 @@ class GameModel : ViewModel() {
             val list: MutableList<Int> = game.gameBoard.toMutableList()
 
             if (game.gameState == "player1_turn") {
-                list[cell] = 1
-
+                if (list[cell] == 0)
+                    list[cell] = 1
             } else if (game.gameState == "player2_turn") {
-                list[cell] = 2
+                if (list[cell] == 0)
+                    list[cell] = 2
             }
-            var turn = ""
-            if (game.gameState == "player1_turn") {
-                turn = "player2_turn"
-            } else {
-                turn = "player1_turn"
-            }
+
+           var state = if (game.gameState == "player1_turn") {
+                "player2_turn"
+            } else "player1_turn"
 
             val winner = checkWinner(list.toList())
-            if (winner == 1) {
-                turn = "player1_won"
-            } else if (winner == 2) {
-                turn = "player2_won"
-            } else if (winner == 3) {
-                turn = "draw"
+            when (winner) {
+                1 -> {
+                    state = "player1_won"
+                }
+                2 -> {
+                    state = "player2_won"
+                }
+                3 -> {
+                    state = "draw"
+                }
             }
 
             db.collection("games").document(gameId)
                 .update(
                     "gameBoard", list,
-                    "gameState", turn
+                    "gameState", state
                 )
         }
 

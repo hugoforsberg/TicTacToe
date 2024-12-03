@@ -2,6 +2,7 @@ package com.hugo.tictactoe
 
 import android.content.Context
 import android.util.Log
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
@@ -101,13 +103,26 @@ fun NewPlayerScreen(navController: NavController, model: GameModel) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            var showError by remember { mutableStateOf(false) }
+
             OutlinedTextField(
                 value = playerName,
-                onValueChange = { playerName = it },
+                onValueChange = {
+                    playerName = it
+                    showError = it.isBlank()
+                },
                 label = { Text("Enter your username") },
+                isError = showError,
                 modifier = Modifier.fillMaxWidth()
             )
-
+            if (showError) {
+                Text(
+                    text = "Username cannot be empty",
+                    color = Color.Red,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
@@ -149,7 +164,6 @@ fun LobbyScreen(navController: NavController, model: GameModel) {
 
     LaunchedEffect(games) {
         games.forEach { (gameId, game) ->
-            // TODO: Popup with accept invite?
             if ((game.player1Id == model.localPlayerID.value ||
                         game.player2Id == model.localPlayerID.value) &&
                 (game.gameState == "player1_turn" || game.gameState == "player2_turn")
@@ -220,7 +234,6 @@ fun LobbyScreen(navController: NavController, model: GameModel) {
                                                 containerColor = Color(0xFF4CAF50), // Green
                                                 contentColor = Color.White              // Text color
                                             )
-                                            //TODO : edit button size
                                         ) {
                                             Text("Accept invite")
                                         }
@@ -245,8 +258,7 @@ fun LobbyScreen(navController: NavController, model: GameModel) {
                                             colors = ButtonDefaults.buttonColors(
                                                 containerColor = Color.Red,       // Red
                                                 contentColor = Color.White       // Text color
-                                            ),
-                                            //TODO : edit button size
+                                            )
                                         ) {
                                             Text("Decline invite")
                                         }
@@ -324,7 +336,7 @@ fun GameScreen(navController: NavController, model: GameModel, gameId: String?) 
                                 style = MaterialTheme.typography.headlineMedium
                             )
                         }
-                        Button(onClick = {
+                        Button(onClick = { //TODO: Snygga till knappen
                             navController.navigate("lobby")
                         }) {
                             Text("Back to Lobby")
@@ -341,75 +353,79 @@ fun GameScreen(navController: NavController, model: GameModel, gameId: String?) 
                         Text(turn, style = MaterialTheme.typography.headlineMedium)
                         Spacer(modifier = Modifier.padding(20.dp))
 
+                        Text("Game ID: $gameId")
                         Text("Player 1: ${players[game.player1Id]!!.name}")
                         Text("Player 2: ${players[game.player2Id]!!.name}")
-                        Text("Game ID: $gameId")
                         Text("Game State: ${game.gameState}")
                     }
                 }
 
-                Spacer(modifier = Modifier.padding(20.dp))
+                Spacer(modifier = Modifier.padding(15.dp))
 
                 //row * 3 + col
                 //i * 3 + j
+
+                val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+                val squareSize = screenWidth / 4
+
 
                 //Draw the board
                 for (i in 0..<rows) {
                     Row {
                         for (j in 0..<cols) {
-                            Button(
-                                shape = RectangleShape,
-                                modifier = Modifier
-                                    .size(80.dp)
-                                    .padding(2.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color.LightGray
-                                ),
+                            DrawSquare(
+                                state = game.gameBoard[i * cols + j],
                                 onClick = {
-                                    model.checkGameState(gameId, i * cols + j)
-                                    Log.d("GameBoard", "Game board after click: ${game.gameBoard}")
+                                    if (game.gameBoard[i * cols + j] == 0)
+                                        model.checkGameState(gameId, i * cols + j)
                                 }
-                            ) {
-                                when (game.gameBoard[i * cols + j]) {
-                                    1 -> Icon(
-                                        painter = painterResource(
-                                            id = outline_cross_24
-                                        ),
-                                        tint = Color.Red,
-                                        contentDescription = "X",
-                                        modifier = Modifier
-                                            .size(50.dp)
-                                            .aspectRatio(1f)
 
-                                    )
-
-                                    2 -> Icon(
-                                        painter = painterResource(
-                                            id = outline_circle_24
-                                        ),
-                                        tint = Color.Blue,
-                                        contentDescription = "O",
-                                        modifier = Modifier
-                                            .size(50.dp)
-                                            .aspectRatio(1f)
-                                    )
-
-                                    else -> Text(" ")
-
-                                }
-                            }
+                            )
                         }
                     }
                 }
-            }
         }
-    } else {
-        Log.e(
-            "gameNotFound",
-            "Error Game not found: $gameId"
-        )
-        navController.navigate("lobby")
     }
+} else {
+    Log.e(
+        "gameNotFound",
+        "Error Game not found: $gameId"
+    )
+    navController.navigate("lobby")
+}
 }
 
+@Composable
+fun DrawSquare(state: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val buttonColor = if (isSystemInDarkTheme()) Color.DarkGray else Color.LightGray
+    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+    val squareSize = screenWidth / 4
+
+    Button(
+        colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
+        onClick = onClick,
+        shape = RectangleShape,
+        modifier = modifier
+            .size(squareSize)
+            .padding(2.dp)
+    ) {
+        when (state) {
+            1 -> Icon(
+                painter = painterResource(id = outline_cross_24),
+                tint = Color.Red,
+                contentDescription = "X",
+                modifier = Modifier.size(50.dp)
+            )
+
+            2 -> Icon(
+                painter = painterResource(id = outline_circle_24),
+                tint = Color.Blue,
+                contentDescription = "O",
+                modifier = Modifier.size(50.dp)
+            )
+
+            else -> Text(" ")
+        }
+    }
+}
 
