@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -40,9 +39,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
@@ -153,7 +150,10 @@ fun NewPlayerScreen(navController: NavController, model: GameModel) {
                 Text("Create Player")
             }
         }
-    } else Text("Loading...")
+    } else Text(
+        text = "Loading...",
+        style = MaterialTheme.typography.headlineMedium
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -164,9 +164,8 @@ fun LobbyScreen(navController: NavController, model: GameModel) {
 
     LaunchedEffect(games) {
         games.forEach { (gameId, game) ->
-            if ((game.player1Id == model.localPlayerID.value ||
-                        game.player2Id == model.localPlayerID.value) &&
-                (game.gameState == "player1_turn" || game.gameState == "player2_turn")
+            if ((game.player1Id == model.localPlayerID.value || game.player2Id == model.localPlayerID.value) &&
+                game.gameState !in listOf("invite", "player1_won", "player2_won", "draw")
             ) {
                 navController.navigate("game/${gameId}")
             }
@@ -206,7 +205,7 @@ fun LobbyScreen(navController: NavController, model: GameModel) {
                             Text("Player Name: ${player.name}")
                         },
                         supportingContent = {
-                            Text("Status: ...")
+                            Text("Status: In Lobby")
                         },
                         trailingContent = {
                             var hasGame = false
@@ -276,9 +275,6 @@ fun LobbyScreen(navController: NavController, model: GameModel) {
                                                 player2Id = documentId
                                             )
                                         )
-                                        .addOnSuccessListener { documentRef ->
-                                            // TODO: Navigate?
-                                        }
                                 }) {
                                     Text("Challenge")
                                 }
@@ -296,9 +292,6 @@ fun LobbyScreen(navController: NavController, model: GameModel) {
 fun GameScreen(navController: NavController, model: GameModel, gameId: String?) {
     val players by model.playerMap.asStateFlow().collectAsStateWithLifecycle()
     val games by model.gameMap.asStateFlow().collectAsStateWithLifecycle()
-
-    Log.d("Recomposition", "Composable redrawn. Game board: ${games[gameId]?.gameBoard}")
-
 
     var playerName = "Unknown?"
     players[model.localPlayerID.value]?.let {
@@ -327,18 +320,33 @@ fun GameScreen(navController: NavController, model: GameModel, gameId: String?) 
 
                         if (game.gameState == "draw") {
                             Text(
-                                "It's a draw!", style =
-                                MaterialTheme.typography.headlineMedium
+                                text = "It's a draw!",
+                                style = MaterialTheme.typography.headlineMedium
                             )
                         } else {
+                            val resultText = if (
+                                (game.player1Id == model.localPlayerID.value && game.gameState == "player1_won") ||
+                                (game.player2Id == model.localPlayerID.value && game.gameState == "player2_won")
+                            ) {
+                                "You won!"
+                            } else {
+                                "You lost!"
+                            }
+
                             Text(
-                                "Player ${if (game.gameState == "player1_won") "1" else "2"} won!",
+                                text = resultText,
                                 style = MaterialTheme.typography.headlineMedium
                             )
                         }
-                        Button(onClick = { //TODO: Snygga till knappen
-                            navController.navigate("lobby")
-                        }) {
+                        Button(
+                            onClick = {
+                                navController.navigate("lobby")
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF150534),
+                                contentColor = Color.White
+                            )
+                        ) {
                             Text("Back to Lobby")
                         }
                     }
@@ -356,17 +364,17 @@ fun GameScreen(navController: NavController, model: GameModel, gameId: String?) 
                         Text("Game ID: $gameId")
                         Text("Player 1: ${players[game.player1Id]!!.name}")
                         Text("Player 2: ${players[game.player2Id]!!.name}")
-                        Text("Game State: ${game.gameState}")
+                        Text(
+                            text = "Game State: " +
+                                    if (game.gameState == "player1_turn") "Player 1's turn" else "Player 2's turn"
+                        )
                     }
                 }
 
-                Spacer(modifier = Modifier.padding(15.dp))
+                Spacer(modifier = Modifier.padding(10.dp))
 
                 //row * 3 + col
                 //i * 3 + j
-
-                val screenWidth = LocalConfiguration.current.screenWidthDp.dp
-                val squareSize = screenWidth / 4
 
 
                 //Draw the board
@@ -384,15 +392,15 @@ fun GameScreen(navController: NavController, model: GameModel, gameId: String?) 
                         }
                     }
                 }
+            }
         }
+    } else {
+        Log.e(
+            "gameNotFound",
+            "Error Game not found: $gameId"
+        )
+        navController.navigate("lobby")
     }
-} else {
-    Log.e(
-        "gameNotFound",
-        "Error Game not found: $gameId"
-    )
-    navController.navigate("lobby")
-}
 }
 
 @Composable
@@ -414,14 +422,14 @@ fun DrawSquare(state: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
                 painter = painterResource(id = outline_cross_24),
                 tint = Color.Red,
                 contentDescription = "X",
-                modifier = Modifier.size(50.dp)
+                modifier = Modifier.size(100.dp)
             )
 
             2 -> Icon(
                 painter = painterResource(id = outline_circle_24),
                 tint = Color.Blue,
                 contentDescription = "O",
-                modifier = Modifier.size(50.dp)
+                modifier = Modifier.size(100.dp)
             )
 
             else -> Text(" ")
