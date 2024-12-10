@@ -210,10 +210,12 @@ fun LobbyScreen(navController: NavController, model: GameModel) {
                         trailingContent = {
                             var hasGame = false
                             games.forEach { (gameId, game) ->
-                                if (game.player1Id == model.localPlayerID.value && game.gameState == "invite") {
+                                if (game.player1Id == model.localPlayerID.value &&
+                                    game.player2Id == documentId && game.gameState == "invite") {
                                     Text("Waiting for response...")
                                     hasGame = true
-                                } else if (game.player2Id == model.localPlayerID.value && game.gameState == "invite") {
+                                } else if (game.player2Id == model.localPlayerID.value
+                                    && game.player1Id == documentId && game.gameState == "invite") {
                                     Row {
                                         Button(
                                             onClick = {
